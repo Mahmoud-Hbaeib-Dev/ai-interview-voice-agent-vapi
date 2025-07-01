@@ -24,6 +24,11 @@ function CreateInterview() {
     setStep(2);
   };
 
+  const onGoBack = () => {
+    console.log('📄 PAGE.JSX - onGoBack called! Moving to step 1');
+    setStep(1);
+  };
+
   return (
     <div>
       {(() => {
@@ -36,10 +41,10 @@ function CreateInterview() {
               GoToNext={onGoToNext}
             />
           );
-        } else if (step == 2) {
-          console.log('📄 PAGE.JSX - Rendering QuestionList with data:', formData);
-          return <QuestionList formData={formData} />;
-        } else {
+                 } else if (step == 2) {
+           console.log('📄 PAGE.JSX - Rendering QuestionList with data:', formData);
+           return <QuestionList formData={formData} GoBack={onGoBack} />;
+         } else {
           console.log('📄 PAGE.JSX - No component to render for step:', step);
           return null;
         }
