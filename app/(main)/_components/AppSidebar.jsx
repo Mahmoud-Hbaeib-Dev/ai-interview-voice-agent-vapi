@@ -29,10 +29,12 @@ export function AppSidebar() {
           height={100}
           className="object-contain"
         />
-        <Button className="w-full">
-          <Plus className="mr-2" /> 
-          Create New Interview
-        </Button>
+        <Link href="/dashboard/create-interview">
+          <Button className="w-full">
+            <Plus className="mr-2" /> 
+            Create New Interview
+          </Button>
+        </Link>
       </SidebarHeader>
       
       <SidebarContent>
