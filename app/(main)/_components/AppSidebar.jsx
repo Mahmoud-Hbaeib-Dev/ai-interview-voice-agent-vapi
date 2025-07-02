@@ -9,18 +9,18 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar"
+  } from "@/components/ui/sidebar"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { SideBarOptions } from "../../../service/constant"
-export function AppSidebar() {
+  export function AppSidebar() {
     const pathname = usePathname();
     console.log(pathname);  
-  return (
-    <Sidebar>
+    return (
+      <Sidebar>
       <SidebarHeader className='flex flex-col items-center mt-5 space-y-4'>
         <Image 
           src="/assets/images/logo.png" 
@@ -37,7 +37,7 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       
-      <SidebarContent>
+        <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -56,13 +56,13 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
+        </SidebarContent>
       
       <SidebarFooter className="p-4">
         <div className="text-xs text-center text-muted-foreground">
           Powered by VAPI
         </div>
       </SidebarFooter>
-    </Sidebar>
-  )
-}
+      </Sidebar>
+    )
+  }
