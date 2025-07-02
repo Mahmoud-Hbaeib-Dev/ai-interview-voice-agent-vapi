@@ -8,23 +8,13 @@ import axios from 'axios';
 import QuestionListContainer from './questionListContainer';
 import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { useUser } from '../../../provider';
 
 function QuestionList({formData, GoBack}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [questionList, setQuestionList] = useState([]);
-  const [userEmail, setUserEmail] = useState(null);
-
-  useEffect(() => {
-    // Get the user's email when component mounts
-    const getUserEmail = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email);
-      }
-    };
-    getUserEmail();
-  }, []);
+  const user = useUser(); // Get user data from context
 
   useEffect(() => {
     if (formData) {
@@ -68,12 +58,18 @@ function QuestionList({formData, GoBack}) {
 
   const onFinish = async () => {
     try {
+      if (!user || !user.email) {
+        toast.error("User email not available");
+        return;
+      }
+
       const interview_id = uuidv4();
       
       // Transform the data to match database schema
       const transformedFormData = {
         ...formData,
         type: formData.selectedTypes.join(', '), // Convert array to string
+        duration: `${formData.duration} minutes`, // Save duration with 'minutes' text
       };
       // Remove the selectedTypes field since we converted it to type
       delete transformedFormData.selectedTypes;
@@ -84,7 +80,7 @@ function QuestionList({formData, GoBack}) {
           { 
             ...transformedFormData,
             questionList: questionList,
-            userEmail: userEmail,
+            userEmail: user.email, // Use email from user context
             interview_id: interview_id,
             created_at: new Date().toISOString(),
           },
