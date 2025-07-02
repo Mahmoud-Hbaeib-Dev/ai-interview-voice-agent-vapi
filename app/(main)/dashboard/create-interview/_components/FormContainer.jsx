@@ -44,15 +44,16 @@ function FormContainer({ onHandleInputChange, GoToNext }) {
 
     const handleInputChange = (field, value) => {
         console.log('🔷 FORM CONTAINER - handleInputChange called:', field, '=', value);
-        setFormData(prev => ({
-            ...prev,
+        const newFormData = {
+            ...formData,
             [field]: value
-        }));
+        };
+        setFormData(newFormData);
         
-        // Also call parent's onHandleInputChange
+        // Also call parent's onHandleInputChange with complete form data
         if (onHandleInputChange) {
-            console.log('🔷 FORM CONTAINER - Calling parent onHandleInputChange');
-            onHandleInputChange(field, value);
+            console.log('🔷 FORM CONTAINER - Calling parent onHandleInputChange with complete data');
+            onHandleInputChange(newFormData);
         } else {
             console.log('🔷 FORM CONTAINER - No parent onHandleInputChange function provided!');
         }
@@ -74,10 +75,13 @@ function FormContainer({ onHandleInputChange, GoToNext }) {
         console.log('🔷 FORM CONTAINER - Validation PASSED! Starting generation...');
         setIsGenerating(true);
 
-        // Pass selected types to parent
+        // Pass complete form data including selected types to parent
         if (onHandleInputChange) {
-            console.log('🔷 FORM CONTAINER - Passing selectedTypes to parent');
-            onHandleInputChange('selectedTypes', selectedTypes);
+            console.log('🔷 FORM CONTAINER - Passing complete data to parent');
+            onHandleInputChange({
+                ...formData,
+                selectedTypes
+            });
         } else {
             console.log('🔷 FORM CONTAINER - No onHandleInputChange function to pass data!');
         }
@@ -276,8 +280,6 @@ function FormContainer({ onHandleInputChange, GoToNext }) {
                         )}
                     </div>
                 </div>
-
-
 
                 {/* Action Buttons */}
                 <div className="flex justify-between mt-8">

@@ -10,12 +10,14 @@ import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { useUser } from '../../../provider';
 
-function QuestionList({formData, GoBack}) {
+function QuestionList({formData, GoBack, onCreateInterviewLink}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [questionList, setQuestionList] = useState([]);
   const user = useUser(); // Get user data from context
+  const [saveLoading, setSaveLoading] = useState(false);
 
+  
   useEffect(() => {
     if (formData) {
       GeneralQuestionList();
@@ -26,8 +28,16 @@ function QuestionList({formData, GoBack}) {
     setLoading(true);
     setError(null);
     try {
+      // Validate required fields
+      if (!formData.jobPosition || !formData.jobDescription || !formData.selectedTypes) {
+        throw new Error("Missing required fields: job position, description, or interview types");
+      }
+
       const result = await axios.post("/api/ai-model", {
-        ...formData,
+        jobPosition: formData.jobPosition,
+        jobDescription: formData.jobDescription,
+        selectedTypes: formData.selectedTypes,
+        duration: formData.duration || "30" // Default to 30 minutes if not specified
       });
       
       if (result.data.error) {
@@ -57,6 +67,7 @@ function QuestionList({formData, GoBack}) {
   }
 
   const onFinish = async () => {
+    setSaveLoading(true);
     try {
       if (!user || !user.email) {
         toast.error("User email not available");
@@ -87,6 +98,11 @@ function QuestionList({formData, GoBack}) {
         ])
         .select();
 
+      setSaveLoading(false);
+        
+      onCreateInterviewLink(interview_id);
+      
+      
       if (error) {
         toast.error("Failed to save interview");
         console.error("Error saving interview:", error);
@@ -185,10 +201,12 @@ function QuestionList({formData, GoBack}) {
         {questionList && questionList.length > 0 && !loading && !error && (
           <div className="flex justify-center mt-6">
             <Button 
-              onClick={onFinish}
+              onClick={() => onFinish()} 
+              disabled={saveLoading}
               className="px-8 text-white bg-blue-600 hover:bg-blue-700"
             >
-              Finish
+              Create Interview Link & Finish
+              {saveLoading && <Loader2Icon className="ml-2 w-4 h-4 animate-spin" />}
             </Button>
           </div>
         )}
