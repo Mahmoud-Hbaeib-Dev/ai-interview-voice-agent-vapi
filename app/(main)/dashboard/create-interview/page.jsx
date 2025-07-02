@@ -75,6 +75,7 @@ export default function CreateInterview() {
           return (
             <InterviewLink 
               interviewId={interviewId}
+              formData={formData}
               onBack={onBackToDashboard}
             />
           );

@@ -24,7 +24,7 @@ export async function POST(req) {
             .replace("{{type}}", selectedTypes?.join(", ") || "Technical");
         
         console.log("📝 FINAL_PROMPT:", FINAL_PROMPT);
-
+        
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -35,10 +35,10 @@ export async function POST(req) {
             },
             body: JSON.stringify({
                 model: "moonshotai/kimi-dev-72b:free",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are an expert technical interviewer. Generate interview questions in the following JSON format EXACTLY:
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert technical interviewer. Generate interview questions in the following JSON format EXACTLY:
 {
   "interviewQuestions": [
     {
@@ -48,18 +48,18 @@ export async function POST(req) {
   ]
 }
 Only include questions of the types specified. Ensure each question is detailed and relevant to the job position. Focus on practical, real-world scenarios and problem-solving questions.`
-                    },
+                },
                     {
                         role: "user",
                         content: FINAL_PROMPT
                     }
-                ],
-                temperature: 0.7,
-                max_tokens: 2000,
-                response_format: { type: "json_object" }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+            response_format: { type: "json_object" }
             })
         });
-
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error("❌ API Error Response:", {
@@ -117,7 +117,7 @@ Only include questions of the types specified. Ensure each question is detailed 
         }
 
         return NextResponse.json(parsedContent);
-
+        
     } catch (error) {
         console.error("❌ Error:", error);
         return NextResponse.json(
