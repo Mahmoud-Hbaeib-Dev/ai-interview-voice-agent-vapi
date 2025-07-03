@@ -17,7 +17,18 @@ export async function POST(request) {
     const body = await request.json();
     console.log('Received request body:', body);
 
-    const { to, subject, position, duration, questions, expirationDate, interviewLink } = body;
+    const { 
+      to, 
+      subject, 
+      position, 
+      duration, 
+      questions, 
+      expirationDate, 
+      interviewLink,
+      companyName = 'Jobite',
+      companyEmail = process.env.SENDGRID_FROM_EMAIL,
+      companyLogo 
+    } = body;
 
     // Validate required fields
     if (!to || !subject || !position || !duration || !interviewLink) {
@@ -50,16 +61,22 @@ export async function POST(request) {
     }
 
     // Create a more professional subject line
-    const emailSubject = `Interview Invitation: ${position} Position at Jobite`;
+    const emailSubject = `Interview Invitation: ${position} Position at ${companyName || 'Jobite'}`;
 
     // Create email content with better formatting
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          ${companyLogo ? `<img src="${companyLogo}" alt="${companyName} Logo" style="max-height: 80px; margin-bottom: 20px;">` : ''}
+          <h2 style="color: #2563eb; margin-bottom: 10px;">${companyName || 'Jobite'}</h2>
+          <p style="color: #6b7280; margin: 0;">${companyEmail || process.env.SENDGRID_FROM_EMAIL}</p>
+        </div>
+
         <h2 style="color: #2563eb; margin-bottom: 20px;">Interview Invitation</h2>
         
         <p>Dear Candidate,</p>
         
-        <p>Thank you for your interest in the <strong>${position}</strong> position at Jobite. We are pleased to invite you to participate in our AI-powered interview process.</p>
+        <p>Thank you for your interest in the <strong>${position}</strong> position at <strong>${companyName || 'Jobite'}</strong>. We are pleased to invite you to participate in our AI-powered interview process.</p>
         
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #374151;">Interview Details</h3>
@@ -67,6 +84,7 @@ export async function POST(request) {
             <li style="margin: 10px 0;">⏱️ <strong>Duration:</strong> ${duration} minutes</li>
             <li style="margin: 10px 0;">❓ <strong>Number of Questions:</strong> ${questions}</li>
             <li style="margin: 10px 0;">📅 <strong>Available Until:</strong> ${expirationDate}</li>
+            <li style="margin: 10px 0;">🏢 <strong>Company:</strong> ${companyName || 'Jobite'}</li>
           </ul>
         </div>
 
@@ -90,8 +108,9 @@ export async function POST(request) {
 
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           Best regards,<br/>
-          ${process.env.SENDGRID_FROM_NAME || 'Recruitment Team'}<br/>
-          Jobite
+          Recruitment Team<br/>
+          ${companyName || 'Jobite'}<br/>
+          ${companyEmail || process.env.SENDGRID_FROM_EMAIL}
         </p>
       </div>
     `;
@@ -100,12 +119,13 @@ export async function POST(request) {
     const textContent = `
 Dear Candidate,
 
-Thank you for your interest in the ${position} position at Jobite. We are pleased to invite you to participate in our AI-powered interview process.
+Thank you for your interest in the ${position} position at ${companyName || 'Jobite'}. We are pleased to invite you to participate in our AI-powered interview process.
 
 Interview Details:
 - Duration: ${duration} minutes
 - Number of Questions: ${questions}
 - Available Until: ${expirationDate}
+- Company: ${companyName || 'Jobite'}
 
 Instructions:
 1. Use the link below when you're ready to start
@@ -117,8 +137,9 @@ Interview Link:
 ${interviewLink}
 
 Best regards,
-${process.env.SENDGRID_FROM_NAME || 'Recruitment Team'}
-Jobite
+Recruitment Team
+${companyName || 'Jobite'}
+${companyEmail || process.env.SENDGRID_FROM_EMAIL}
     `.trim();
 
     // Prepare email message
@@ -126,7 +147,7 @@ Jobite
       to: to,
       from: {
         email: process.env.SENDGRID_FROM_EMAIL,
-        name: 'Jobite Recruitment'
+        name: companyName || 'Jobite Recruitment'
       },
       subject: emailSubject,
       text: textContent,
@@ -135,7 +156,8 @@ Jobite
         sandbox_mode: {
           enable: false
         }
-      }
+      },
+      replyTo: companyEmail || process.env.SENDGRID_FROM_EMAIL
     };
 
     console.log('Attempting to send email with config:', {

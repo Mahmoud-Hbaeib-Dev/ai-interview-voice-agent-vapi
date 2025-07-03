@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import QRCode from 'qrcode.react';
+import { getCurrentUser } from '@/lib/auth';
 
 const InterviewLink = ({ interviewId, formData, onBack }) => {
   const [showQR, setShowQR] = useState(false);
@@ -39,9 +40,18 @@ const InterviewLink = ({ interviewId, formData, onBack }) => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [companyData, setCompanyData] = useState(null);
   const interviewLink = `${window.location.origin}/interview/${interviewId}`;
   const expirationDate = new Date();
   expirationDate.setDate(expirationDate.getDate() + 30);
+
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      const userData = await getCurrentUser();
+      setCompanyData(userData);
+    };
+    loadCompanyData();
+  }, []);
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
@@ -64,7 +74,10 @@ const InterviewLink = ({ interviewId, formData, onBack }) => {
           duration: formData.duration,
           questions: formData.questionList?.length || 10,
           expirationDate: expirationDate.toLocaleDateString(),
-          interviewLink: interviewLink
+          interviewLink: interviewLink,
+          companyName: companyData?.entreprise?.nom,
+          companyEmail: companyData?.email,
+          companyLogo: companyData?.entreprise?.logo
         }),
       });
 
@@ -276,7 +289,7 @@ const InterviewLink = ({ interviewId, formData, onBack }) => {
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex gap-4 justify-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -290,6 +303,20 @@ const InterviewLink = ({ interviewId, formData, onBack }) => {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Return to your dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  onClick={() => window.location.href = '/dashboard/create-interview'}
+                  className="px-8 py-2 text-base text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Create New Interview
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Start creating a new interview</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
