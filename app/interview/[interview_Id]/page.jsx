@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
+import { InterviewDataContext } from '@/context/InterviewDataContext'
 
 function Interview() {
     const params = useParams();
@@ -17,7 +19,9 @@ function Interview() {
     const [interviewData, setInterviewData] = useState();
     const [userName, setUserName] = useState();
     const [loading, setLoading] = useState(false);
-    
+    const { interviewInfo, setInterviewInfo } = useContext(InterviewDataContext);
+    const router = useRouter();
+  
     useEffect(() => {
         interviewId && GetInterviewHeader();
     },[interviewId])
@@ -43,12 +47,30 @@ function Interview() {
         }
     }
 
+  const onJoinInterview = async () => { 
+    setLoading(true);
+        let { data: Interviews, error } = await supabase
+        .from('Interviews')
+        .select('*')
+      .eq('interview_id', interviewId)
+    console.log(Interviews[0]);
+    console.log("Interview data from Supabase:", Interviews[0]);
+    setInterviewInfo({
+      userName: userName,
+      interviewData: {
+        questionList: Interviews[0].questionList || []
+      },
+      ...Interviews[0]  // Spread the rest of the interview data
+    });
+    router.push(`/interview/${interviewId}/start`);
+    setLoading(false);
+  }
     
   return (
     <div className='px-10 mt-8 md:px-28 lg:px-48 xl:px-64'>
       <Card className='flex flex-col items-center p-8 bg-white rounded-lg'>
         {/* Header Section */}
-        <h1 className='text-[#2563EB] text-2xl font-semibold mb-1'>AIcruiter</h1>
+        <h1 className='text-[#2563EB] text-2xl font-semibold mb-1'>Jobite Recruit AI</h1>
         <p className='mb-6 text-gray-600'>AI-Powered Interview Platform</p>
         
         {/* Main Image */}
@@ -110,11 +132,15 @@ function Interview() {
 
         {/* Action Buttons */}
         <div className='space-y-3 w-full max-w-md'>
-                  <Button className='flex gap-2 justify-center items-center w-full text-white bg-blue-600 hover:bg-blue-700' disabled={loading||!userName}>
+          <Button className='flex gap-2 justify-center items-center w-full text-white bg-blue-600 hover:bg-blue-700'
+            disabled={loading || !userName}
+            onClick={() => onJoinInterview()}
+
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            Join Interview
+            <video /> {loading && <Loader2/> } Join Interview
           </Button>
           <Button variant="outline" className='flex gap-2 justify-center items-center w-full'>
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
