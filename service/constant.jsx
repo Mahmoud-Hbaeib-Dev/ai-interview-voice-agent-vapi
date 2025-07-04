@@ -7,9 +7,9 @@ export const SideBarOptions = [
         path: "/dashboard",
     },
     {
-        name: "AI Agents",
+        name: "AI assistants",
         icon: Bot,
-        path: "/agents",
+        path: "/dashboard/assistants",
     },
     {
         name: "Create Interview",
@@ -19,17 +19,22 @@ export const SideBarOptions = [
     {
         name: "Interviews",
         icon: Users,
-        path: "/interviews",
+        path: "/dashboard/interviews",
+    },
+    {
+        name: "Feedback",
+        icon: Users,
+        path: "/dashboard/feedback",
     },
     {
         name: "Analytics",
         icon: BarChart3,
-        path: "/analytics",
+        path: "/dashboard/analytics",
     },
     {
         name: "Settings",
         icon: Settings,
-        path: "/settings",
+        path: "/dashboard/settings",
     },
 
 ]

@@ -203,14 +203,14 @@ export default function StartInterview() {
               
               // Redirect anyway after showing the feedback
               setTimeout(() => {
-                router.replace('/interview/completed');
+                router.replace('/interview/'+interviewUUID+"/completed");
               }, 3000);
             } else {
               console.log('📊 Feedback saved to database:', data);
               toast.success('Interview feedback generated and saved successfully!');
               // Redirect to completed page after successful save
               setTimeout(() => {
-                router.replace('/interview/completed');
+                router.replace('/interview/'+interviewUUID+"/completed");
               }, 2000);
             }
           } catch (dbError) {
@@ -222,7 +222,7 @@ export default function StartInterview() {
             
             // Redirect anyway
             setTimeout(() => {
-              router.replace('/interview/completed');
+              router.replace('/interview/'+interviewUUID+"/completed");
             }, 3000);
           }
           
@@ -331,43 +331,43 @@ export default function StartInterview() {
       name: "AI Recruiter",
       firstMessage: "Hi "+ interviewInfo?.userName+", how are you? Ready for your interview on "+(interviewInfo?.interviewData?.jobPosition || "this position"),
       transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
+          provider: "deepgram",
+          model: "nova-2",
         language: "en-US"
       },
       voice: {
-        provider: "playht",
+          provider: "playht",
         voiceId: "jennifer"
       },
       model: {
-        provider: "openai",
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `
-              You are an AI voice assistant conducting interviews.
-              Your job is to ask candidates provided interview questions, assess their responses.
-              Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
+          provider: "openai",
+          model: "gpt-4",
+          messages: [
+              {
+                  role: "system",
+                  content: `
+                    You are an AI voice assistant conducting interviews.
+                    Your job is to ask candidates provided interview questions, assess their responses.
+                    Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
               "Hey there! Welcome to your ${interviewInfo?.interviewData?.jobPosition} interview. Let's get started with a few questions!"
-              Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the questions ask one by one:
+                    Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the questions ask one by one:
               Questions: ${questionList}
-              If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
+                    If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
               "Need a hint? Think about how React tracks component updates!"
-              Provide brief, encouraging feedback after each answer. Example:
-              "Nice! That's a solid answer."
-              "Hmm, not quite! Want to try again?"
-              Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
+                    Provide brief, encouraging feedback after each answer. Example:
+                    "Nice! That's a solid answer."
+                    "Hmm, not quite! Want to try again?"
+                    Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
               After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
-              "That was great! You handled some tough questions well. Keep sharpening your skills!"
+                    "That was great! You handled some tough questions well. Keep sharpening your skills!"
               End on a positive note:
-              "Thanks for chatting! Hope to see you crushing projects soon!"
-
-              Key Guidelines:
-              ✅ Be friendly, engaging, and witty 😊
+                    "Thanks for chatting! Hope to see you crushing projects soon!"
+                    
+                    Key Guidelines:
+                    ✅ Be friendly, engaging, and witty 😊
               ✅ Keep responses short and natural, like a real conversation
-              ✅ Adapt based on the candidate's confidence level
-              ✅ Ensure the interview remains focused on React
+                    ✅ Adapt based on the candidate's confidence level
+                    ✅ Ensure the interview remains focused on React
             `.trim()
           }
         ]
@@ -618,7 +618,7 @@ export default function StartInterview() {
   useEffect(() => {
     console.log('Interview UUID from URL:', interviewUUID);
     if (interviewUUID) {
-      fetchInterviewDetails();
+    fetchInterviewDetails();
     }
   }, [interviewUUID]);
 
