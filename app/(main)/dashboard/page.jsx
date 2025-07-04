@@ -73,7 +73,7 @@ function Dashboard() {
             const totalInterviews = interviews?.length || 0;
             const completedInterviews = feedback?.length || 0;
             const scheduledInterviews = totalInterviews - completedInterviews;
-            const activeAgents = totalInterviews > 0 ? 1 : 0; // Simplified: 1 if any interviews exist
+            const activeAgents = 1; // You have 1 AI assistant created
 
             setDashboardData({
                 interviews: interviews || [],

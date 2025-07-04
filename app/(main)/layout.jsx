@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCurrentUser, redirectToJobiteLogin } from '../../lib/auth.js';
 import DashboardProvider from './provider';
+import { Toaster } from 'react-hot-toast';
 
 function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -64,6 +65,23 @@ function DashboardLayout({ children }) {
 
     return (
         <DashboardProvider user={user}>
+            <Toaster 
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        theme: {
+                            primary: 'green',
+                            secondary: 'black',
+                        },
+                    },
+                }}
+            />
             {children}
         </DashboardProvider>
     );
