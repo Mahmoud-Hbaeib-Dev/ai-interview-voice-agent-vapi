@@ -78,7 +78,10 @@ export default function StartInterview() {
   }, []);
 
   const StartCall = async () => { 
+    console.log('=== STARTING CALL FUNCTION ===');
+    
     if (!vapiClient) {
+      console.error('Vapi client not available');
       toast.error('Interview system not ready. Please try again.');
       return;
     }
@@ -88,7 +91,7 @@ export default function StartInterview() {
     console.log("Question list:", interviewInfo?.interviewData?.questionList);
     
     if (!interviewInfo?.interviewData?.questionList) {
-      console.log("No question list found");
+      console.error("No question list found");
       toast.error('No questions found for the interview');
       return;
     }
@@ -153,14 +156,23 @@ export default function StartInterview() {
     };
 
     try {
-      console.log('Starting call with assistant options:', assistantOptions);
+      console.log('=== CALLING VAPI START ===');
+      console.log('Assistant options:', assistantOptions);
+      
       // Start the call directly with assistant options
-      await vapiClient.start(assistantOptions);
+      const result = await vapiClient.start(assistantOptions);
+      console.log('Vapi start result:', result);
       console.log('Call started successfully');
       
+      toast.success('Interview started! You can now speak.');
+      
     } catch (error) {
-      console.error('Error starting call:', error);
-      toast.error('Failed to start the interview');
+      console.error('=== ERROR STARTING CALL ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      toast.error('Failed to start the interview: ' + error.message);
       setIsInterviewStarted(false);
     }
   };
@@ -172,9 +184,9 @@ export default function StartInterview() {
   }, [interviewInfo]);
 
   const handleStartInterview = async () => {
-    console.log('Start interview button clicked');
+    console.log('=== START INTERVIEW BUTTON CLICKED ===');
     console.log('Vapi client exists:', !!vapiClient);
-    console.log('Interview info:', interviewInfo);
+    console.log('Interview info exists:', !!interviewInfo);
     
     if (!vapiClient) {
       console.error('Vapi client not ready');
@@ -182,8 +194,16 @@ export default function StartInterview() {
       return;
     }
     
-    console.log('Starting interview...');
+    if (!interviewInfo?.interviewData?.questionList) {
+      console.error('No questions found');
+      toast.error('No questions found for the interview');
+      return;
+    }
+    
+    console.log('Setting interview as started...');
     setIsInterviewStarted(true);
+    
+    console.log('Calling StartCall function...');
     await StartCall();
   };
 
@@ -388,17 +408,22 @@ export default function StartInterview() {
   };
 
   useEffect(() => {
-    fetchInterviewDetails();
-  }, []);
+    console.log('Interview UUID from URL:', interviewUUID);
+    if (interviewUUID) {
+      fetchInterviewDetails();
+    }
+  }, [interviewUUID]);
 
   const fetchInterviewDetails = async () => {
     try {
       setLoading(true);
-      // First get the interview ID using the UUID
+      console.log('Fetching interview with UUID:', interviewUUID);
+      
+      // Use the interview_id field to match the UUID from the URL
       const { data: interview, error } = await supabase
         .from('Interviews')
         .select('*')
-        .eq('id', 13) // Using the known ID from your logs
+        .eq('interview_id', interviewUUID) // Use the UUID from the URL
         .single();
 
       console.log("Supabase response:", interview, error);
@@ -585,8 +610,8 @@ export default function StartInterview() {
               <Briefcase className='w-4 h-4' />
               <span className='text-sm'>{loading ? 'Loading...' : (interviewInfo?.company || 'Jobite Recruit')}</span>
               <span className='text-gray-300'>•</span>
-              <GraduationCap className='w-4 h-4' />
-              <span className='text-sm'>{loading ? 'Loading...' : (interviewInfo?.experience_level || 'Mid-Level')}</span>
+              {/* <GraduationCap className='w-4 h-4' /> */}
+              {/* <span className='text-sm'>{loading ? 'Loading...' : (interviewInfo?.experience_level || 'Mid-Level')}</span> */}
             </div>
           </div>
           <div className='flex flex-col items-end gap-2'>
