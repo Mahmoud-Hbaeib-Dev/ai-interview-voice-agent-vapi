@@ -23,6 +23,40 @@ import Vapi from '@vapi-ai/web'
 export default function StartInterview() {
   const { interviewInfo, setInterviewInfo } = useContext(InterviewDataContext);
   const [vapiClient, setVapiClient] = useState(null);
+  const [userName, setUserName] = useState(interviewInfo?.userName);
+  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const [showEndDialog, setShowEndDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  // Add countdown timer state
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const timerIntervalRef = useRef(null);
+  
+  const params = useParams();
+  const router = useRouter();
+  const interviewUUID = params.interview_Id;
+
+  // Device states
+  const [micPermission, setMicPermission] = useState('pending');
+  const [cameraPermission, setCameraPermission] = useState('pending');
+  const [speakerWorking, setSpeakerWorking] = useState('pending');
+  const [stream, setStream] = useState(null);
+  const audioRef = useRef(null);
+
+  // Add new states for device controls
+  const [isMicOn, setIsMicOn] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
+  const videoRef = useRef(null);
+
+  // Add new states for testing
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState(null);
+  const [showTestGuide, setShowTestGuide] = useState(true);
+
+  // Add test step state
+  const [testStep, setTestStep] = useState('camera'); // 'camera', 'mic', 'speaker'
+  const [isTestingMic, setIsTestingMic] = useState(false);
+  const [testAudio, setTestAudio] = useState(null);
 
   // Initialize Vapi client
   useEffect(() => {
@@ -53,12 +87,26 @@ export default function StartInterview() {
           console.log('Call ended');
           toast.success('Interview completed!');
           setIsInterviewStarted(false);
+          
+          // Clean up timer
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
+          setTimeRemaining(0);
         });
 
         client.on('error', (error) => {
           console.error('Vapi error:', error);
           toast.error('Error during the call');
           setIsInterviewStarted(false);
+          
+          // Clean up timer
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
+          setTimeRemaining(0);
         });
 
         client.on('message', (message) => {
@@ -75,6 +123,63 @@ export default function StartInterview() {
     };
 
     initializeVapi();
+  }, []);
+
+  // Helper function to convert duration to seconds
+  const getDurationInSeconds = (duration) => {
+    if (!duration) return 900; // Default to 15 minutes
+    
+    // Handle different duration formats
+    const durationStr = duration.toString().toLowerCase();
+    
+    if (durationStr.includes('minute')) {
+      const minutes = parseInt(durationStr.match(/\d+/)?.[0] || '15');
+      return minutes * 60;
+    } else if (durationStr.includes('hour')) {
+      const hours = parseInt(durationStr.match(/\d+/)?.[0] || '1');
+      return hours * 3600;
+    } else if (!isNaN(duration)) {
+      // If it's just a number, assume it's minutes
+      return parseInt(duration) * 60;
+    }
+    
+    return 900; // Default to 15 minutes
+  };
+
+  // Start countdown timer
+  const startCountdownTimer = (durationInSeconds) => {
+    setTimeRemaining(durationInSeconds);
+    
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          timerIntervalRef.current = null;
+          setIsInterviewStarted(false);
+          toast.info('Interview time completed!');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    timerIntervalRef.current = interval;
+  };
+
+  // Format time for display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
   }, []);
 
   const StartCall = async () => { 
@@ -152,7 +257,11 @@ export default function StartInterview() {
             `.trim()
           }
         ]
-      }
+      },
+      // Add duration controls
+      maxDurationSeconds: getDurationInSeconds(interviewInfo?.interviewData?.duration),
+      silenceTimeoutSeconds: 45, // Allow 45 seconds of silence before ending
+      endCallMessage: "Thank you for completing the interview. We'll be in touch soon!"
     };
 
     try {
@@ -163,6 +272,10 @@ export default function StartInterview() {
       const result = await vapiClient.start(assistantOptions);
       console.log('Vapi start result:', result);
       console.log('Call started successfully');
+      
+      // Start the countdown timer
+      const durationInSeconds = getDurationInSeconds(interviewInfo?.interviewData?.duration);
+      startCountdownTimer(durationInSeconds);
       
       toast.success('Interview started! You can now speak.');
       
@@ -206,36 +319,6 @@ export default function StartInterview() {
     console.log('Calling StartCall function...');
     await StartCall();
   };
-
-  const [userName, setUserName] = useState(interviewInfo?.userName);
-  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
-  const [showEndDialog, setShowEndDialog] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const params = useParams();
-  const router = useRouter();
-  const interviewUUID = params.interview_Id;
-
-  // Device states
-  const [micPermission, setMicPermission] = useState('pending');
-  const [cameraPermission, setCameraPermission] = useState('pending');
-  const [speakerWorking, setSpeakerWorking] = useState('pending');
-  const [stream, setStream] = useState(null);
-  const audioRef = useRef(null);
-
-  // Add new states for device controls
-  const [isMicOn, setIsMicOn] = useState(false);
-  const [isCameraOn, setIsCameraOn] = useState(false);
-  const videoRef = useRef(null);
-
-  // Add new states for testing
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedAudio, setRecordedAudio] = useState(null);
-  const [showTestGuide, setShowTestGuide] = useState(true);
-
-  // Add test step state
-  const [testStep, setTestStep] = useState('camera'); // 'camera', 'mic', 'speaker'
-  const [isTestingMic, setIsTestingMic] = useState(false);
-  const [testAudio, setTestAudio] = useState(null);
 
   // Check devices on component mount
   useEffect(() => {
@@ -618,7 +701,12 @@ export default function StartInterview() {
             <div className='flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-full'>
               <Timer className='w-5 h-5 text-blue-600' />
               <span className='text-blue-700 font-medium'>
-                {loading ? 'Loading...' : (interviewInfo?.duration || '30 Minutes')}
+                {isInterviewStarted && timeRemaining > 0 
+                  ? `${formatTime(timeRemaining)} remaining`
+                  : loading 
+                  ? 'Loading...' 
+                  : (interviewInfo?.duration || '30 Minutes')
+                }
               </span>
             </div>
             <span className='text-sm text-gray-500'>Interview #{interviewInfo?.id || '...'}</span>
