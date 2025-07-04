@@ -19,6 +19,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import Vapi from '@vapi-ai/web'
+import axios from 'axios'
 
 export default function StartInterview() {
   const { interviewInfo, setInterviewInfo } = useContext(InterviewDataContext);
@@ -27,10 +28,12 @@ export default function StartInterview() {
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState(null);
   
   // Add countdown timer state
   const [timeRemaining, setTimeRemaining] = useState(0);
   const timerIntervalRef = useRef(null);
+  const conversationRef = useRef([]);
   
   const params = useParams();
   const router = useRouter();
@@ -42,6 +45,7 @@ export default function StartInterview() {
   const [speakerWorking, setSpeakerWorking] = useState('pending');
   const [stream, setStream] = useState(null);
   const audioRef = useRef(null);
+  const [conversation, setConversation] = useState([]);
 
   // Add new states for device controls
   const [isMicOn, setIsMicOn] = useState(false);
@@ -63,10 +67,6 @@ export default function StartInterview() {
     const initializeVapi = async () => {
       try {
         const apiKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
-        console.log('Environment check:');
-        console.log('- API Key exists:', !!apiKey);
-        console.log('- API Key length:', apiKey?.length);
-        console.log('- API Key preview:', apiKey?.substring(0, 8) + '...');
         
         if (!apiKey) {
           throw new Error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set');
@@ -76,7 +76,6 @@ export default function StartInterview() {
         // Create a new instance of Vapi with the constructor
         const client = new Vapi(apiKey);
         
-        console.log('Setting up event listeners...');
         // Set up event listeners
         client.on('call-start', () => {
           console.log('Call started');
@@ -88,6 +87,11 @@ export default function StartInterview() {
           toast.success('Interview completed!');
           setIsInterviewStarted(false);
           
+          // Generate feedback after a short delay to ensure conversation is captured
+          setTimeout(() => {
+            generateFeedback();
+          }, 1000);
+          
           // Clean up timer
           if (timerIntervalRef.current) {
             clearInterval(timerIntervalRef.current);
@@ -98,7 +102,12 @@ export default function StartInterview() {
 
         client.on('error', (error) => {
           console.error('Vapi error:', error);
-          toast.error('Error during the call');
+          
+          // Don't show error toast for normal "Meeting has ended" messages
+          if (error?.errorMsg !== 'Meeting has ended') {
+            toast.error('Error during the call');
+          }
+          
           setIsInterviewStarted(false);
           
           // Clean up timer
@@ -110,7 +119,17 @@ export default function StartInterview() {
         });
 
         client.on('message', (message) => {
-          console.log('Message received:', message);
+          // Only log meaningful messages to avoid spam
+          if (message && typeof message === 'object') {
+            console.log('Message received:', message);
+            
+                      // Update conversation when we receive conversation-update messages
+          if (message?.type === 'conversation-update' && message?.conversation) {
+            setConversation(message.conversation);
+            conversationRef.current = message.conversation;
+            console.log('Updated conversation:', message.conversation);
+          }
+          }
         });
         
         setVapiClient(client);
@@ -125,6 +144,101 @@ export default function StartInterview() {
     initializeVapi();
   }, []);
 
+  const generateFeedback = async () => { 
+    try {
+      console.log('🔄 Generating feedback...');
+      console.log('📝 Current conversation state:', conversation);
+      console.log('📝 Current conversation ref:', conversationRef.current);
+      console.log('📊 Conversation length:', conversation?.length);
+      console.log('📊 Conversation ref length:', conversationRef.current?.length);
+      
+      // Use the most recent conversation data
+      const currentConversation = conversationRef.current.length > 0 ? conversationRef.current : conversation;
+      
+      if (!currentConversation || currentConversation.length === 0) {
+        console.warn('⚠️ No conversation data available for feedback');
+        toast.error('No conversation data available for feedback');
+        return;
+      }
+      
+      console.log('📤 Sending conversation to API:', currentConversation);
+      const result = await axios.post('/api/ai-feedback', { conversation: currentConversation });
+      console.log('📊 Feedback API response:', result?.data);
+      
+      if (result?.data?.success) {
+        const FINAL_CONTENT = result?.data?.data.replace(/```json/g, '').replace(/```/g, '');
+        console.log('✅ Feedback generated:', FINAL_CONTENT);
+        
+        // Parse the JSON feedback
+        try {
+          const feedbackData = JSON.parse(FINAL_CONTENT);
+          console.log('📈 Parsed feedback:', feedbackData);
+          setFeedback(feedbackData);
+          
+          // Save to database
+          const feedbackRecord = {
+            userName: interviewInfo?.userName, 
+            userEmail: interviewInfo?.userEmail,
+            interview_id: interviewUUID,
+            feedback: feedbackData,
+            recommended: feedbackData?.feedback?.Recommendation === 'Yes',
+            created_at: new Date().toISOString(),
+          };
+          
+          console.log('📤 Attempting to save feedback record:', feedbackRecord);
+          
+          try {
+            const { data, error } = await supabase
+              .from('interview-feedback')
+              .insert([feedbackRecord])
+              .select();
+            
+            if (error) {
+              console.error('❌ Database save error:', error);
+              console.error('❌ Error details:', error.message, error.code, error.details);
+              
+              // Still show success for feedback generation even if DB save fails
+              toast.success('Interview feedback generated successfully!');
+              toast.error('Note: Could not save to database - check console for details');
+              
+              // Redirect anyway after showing the feedback
+              setTimeout(() => {
+                router.replace('/interview/completed');
+              }, 3000);
+            } else {
+              console.log('📊 Feedback saved to database:', data);
+              toast.success('Interview feedback generated and saved successfully!');
+              // Redirect to completed page after successful save
+              setTimeout(() => {
+                router.replace('/interview/completed');
+              }, 2000);
+            }
+          } catch (dbError) {
+            console.error('❌ Database insertion error:', dbError);
+            
+            // Still show success for feedback generation
+            toast.success('Interview feedback generated successfully!');
+            toast.error('Database save failed - check console for details');
+            
+            // Redirect anyway
+            setTimeout(() => {
+              router.replace('/interview/completed');
+            }, 3000);
+          }
+          
+        } catch (parseError) {
+          console.error('❌ Error parsing feedback JSON:', parseError);
+          toast.error('Error processing feedback data');
+        }
+      } else {
+        console.error('❌ Feedback generation failed:', result?.data?.error);
+        toast.error('Failed to generate feedback');
+      }
+    } catch (error) {
+      console.error('❌ Error generating feedback:', error);
+      toast.error('Error generating interview feedback');
+    }
+  }
   // Helper function to convert duration to seconds
   const getDurationInSeconds = (duration) => {
     if (!duration) return 900; // Default to 15 minutes
@@ -183,7 +297,7 @@ export default function StartInterview() {
   }, []);
 
   const StartCall = async () => { 
-    console.log('=== STARTING CALL FUNCTION ===');
+    console.log('Starting interview call...');
     
     if (!vapiClient) {
       console.error('Vapi client not available');
@@ -215,7 +329,7 @@ export default function StartInterview() {
 
     const assistantOptions = {
       name: "AI Recruiter",
-      firstMessage: "Hi "+ interviewInfo?.userName+", how are you? Ready for your interview on "+interviewInfo?.interviewData?.jobPosition,
+      firstMessage: "Hi "+ interviewInfo?.userName+", how are you? Ready for your interview on "+(interviewInfo?.interviewData?.jobPosition || "this position"),
       transcriber: {
         provider: "deepgram",
         model: "nova-2",
@@ -260,18 +374,16 @@ export default function StartInterview() {
       },
       // Add duration controls
       maxDurationSeconds: getDurationInSeconds(interviewInfo?.interviewData?.duration),
-      silenceTimeoutSeconds: 45, // Allow 45 seconds of silence before ending
+      silenceTimeoutSeconds: 20, // Allow 20 seconds of silence before ending
       endCallMessage: "Thank you for completing the interview. We'll be in touch soon!"
     };
 
     try {
-      console.log('=== CALLING VAPI START ===');
-      console.log('Assistant options:', assistantOptions);
+      console.log('Calling Vapi start...');
       
       // Start the call directly with assistant options
       const result = await vapiClient.start(assistantOptions);
-      console.log('Vapi start result:', result);
-      console.log('Call started successfully');
+      console.log('Interview call started successfully');
       
       // Start the countdown timer
       const durationInSeconds = getDurationInSeconds(interviewInfo?.interviewData?.duration);
@@ -297,9 +409,7 @@ export default function StartInterview() {
   }, [interviewInfo]);
 
   const handleStartInterview = async () => {
-    console.log('=== START INTERVIEW BUTTON CLICKED ===');
-    console.log('Vapi client exists:', !!vapiClient);
-    console.log('Interview info exists:', !!interviewInfo);
+    console.log('Starting interview...');
     
     if (!vapiClient) {
       console.error('Vapi client not ready');
@@ -313,11 +423,26 @@ export default function StartInterview() {
       return;
     }
     
-    console.log('Setting interview as started...');
     setIsInterviewStarted(true);
-    
-    console.log('Calling StartCall function...');
     await StartCall();
+  };
+
+  const handleEndInterview = async () => {
+    console.log('Ending interview...');
+    
+    if (!vapiClient) {
+      console.error('Vapi client not available');
+      return;
+    }
+    
+    try {
+      await vapiClient.stop();
+      console.log('Interview ended successfully');
+      toast.success('Interview ended');
+    } catch (error) {
+      console.error('Error ending interview:', error);
+      toast.error('Error ending interview');
+    }
   };
 
   // Check devices on component mount
@@ -736,7 +861,6 @@ export default function StartInterview() {
               />
             </div>
             <h2 className='text-xl font-medium text-gray-800 mb-2'>{interviewInfo?.userName || 'Candidate'}</h2>
-            {console.log(interviewInfo?.userName)}
             <span className='text-sm text-gray-500'>Interviewee</span>
           </div>
         </div>
@@ -978,17 +1102,11 @@ export default function StartInterview() {
                     variant="destructive"
                     className="bg-red-600 hover:bg-red-700"
                     onClick={() => {
-                      // Stop all media tracks
-                      if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                      }
-                      setIsInterviewStarted(false);
+                      handleEndInterview();
                       setShowEndDialog(false);
-                      toast.success('Interview ended successfully');
                       // Reset device states
                       setIsMicOn(false);
                       setIsCameraOn(false);
-                      checkDevices(); // Re-check devices for next interview
                     }}
                   >
                     End Interview

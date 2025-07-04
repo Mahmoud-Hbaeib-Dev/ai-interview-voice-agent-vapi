@@ -18,6 +18,7 @@ function Interview() {
     
     const [interviewData, setInterviewData] = useState();
     const [userName, setUserName] = useState();
+    const [userEmail, setUserEmail] = useState();
     const [loading, setLoading] = useState(false);
     const { interviewInfo, setInterviewInfo } = useContext(InterviewDataContext);
     const router = useRouter();
@@ -57,6 +58,7 @@ function Interview() {
     console.log("Interview data from Supabase:", Interviews[0]);
     setInterviewInfo({
       userName: userName,
+      userEmail: userEmail,
       interviewData: {
         questionList: Interviews[0].questionList || []
       },
@@ -113,6 +115,19 @@ function Interview() {
           />
         </div>
 
+        {/* Email Input */}
+        <div className='mb-6 w-full max-w-md'>
+          <label className='block mb-2 text-sm font-medium text-gray-700'>
+            Enter your email
+          </label>
+          <Input 
+            type="email"
+            placeholder="e.g., mahmoud@example.com" onChange={(event) => setUserEmail(event.target.value)}
+            className='w-full'
+            required
+          />
+        </div>
+
         {/* Instructions Card */}
         <div className='w-full max-w-md bg-[#EEF2FF] p-4 rounded-lg mb-6'>
           <div className='flex gap-2 items-start'>
@@ -133,9 +148,8 @@ function Interview() {
         {/* Action Buttons */}
         <div className='space-y-3 w-full max-w-md'>
           <Button className='flex gap-2 justify-center items-center w-full text-white bg-blue-600 hover:bg-blue-700'
-            disabled={loading || !userName}
+            disabled={loading || !userName || !userEmail}
             onClick={() => onJoinInterview()}
-
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
